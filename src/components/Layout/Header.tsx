@@ -79,7 +79,7 @@ export default function Header({ onAuthClick }: HeaderProps) {
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="md:hidden py-4 border-t border-gray-200">
+          <div className="md:hidden py-4 border-t border-gray-200 max-h-[calc(100vh-64px)] overflow-y-auto"> {/* Added max-h and overflow-y-auto */}
             <nav className="flex flex-col space-y-4">
               <a
                 href="#home"

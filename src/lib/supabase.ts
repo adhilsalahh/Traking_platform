@@ -1,4 +1,6 @@
+// src/lib/supabase.ts
 import { createClient } from '@supabase/supabase-js';
+import bcrypt from 'bcryptjs';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://demo.supabase.co';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'demo-anon-key';
@@ -106,6 +108,7 @@ export interface Booking {
 export interface AdminUser {
   id: string;
   username: string;
+  password_hash: string;
   email: string;
   full_name: string;
   role: string;
@@ -114,6 +117,94 @@ export interface AdminUser {
   created_at: string;
   updated_at: string;
 }
+
+// Create default admin user if it doesn't exist
+export const createDefaultAdmin = async () => {
+  try {
+    // Check if admin user already exists
+    const { data: existingAdmin } = await supabase
+      .from('admin_users')
+      .select('id')
+      .eq('username', 'admin')
+      .limit(1);
+
+    if (existingAdmin && existingAdmin.length > 0) {
+      console.log('Admin user already exists');
+      return { success: true, message: 'Admin user already exists' };
+    }
+
+    // Hash the default password
+    const hashedPassword = await bcrypt.hash('admin123', 10);
+
+    // Create the admin user
+    const { data, error } = await supabase
+      .from('admin_users')
+      .insert({
+        username: 'admin',
+        password_hash: hashedPassword,
+        email: 'admin@keralatrekking.com',
+        full_name: 'System Administrator',
+        role: 'admin',
+        is_active: true
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating admin user:', error);
+      return { success: false, error: error.message };
+    }
+
+    console.log('Default admin user created successfully');
+    return { success: true, data };
+  } catch (error) {
+    console.error('Error in createDefaultAdmin:', error);
+    return { success: false, error: 'Failed to create admin user' };
+  }
+};
+
+// Admin authentication
+export const adminLogin = async (username: string, password: string) => {
+  try {
+    // First, try to create default admin if it doesn't exist
+    await createDefaultAdmin();
+
+    const { data, error } = await supabase
+      .from('admin_users')
+      .select('*')
+      .eq('username', username)
+      .eq('is_active', true);
+
+    if (error) {
+      console.error('Database error:', error);
+      return { user: null, error: 'Database connection error' };
+    }
+
+    if (!data || data.length === 0) {
+      return { user: null, error: 'Invalid username or user not found' };
+    }
+
+    const user = data[0];
+
+    // Secure password check using bcryptjs
+    const passwordMatch = await bcrypt.compare(password, user.password_hash);
+
+    if (!passwordMatch) {
+      return { user: null, error: 'Invalid password' };
+    }
+
+    // Update last login
+    await supabase
+      .from('admin_users')
+      .update({ last_login: new Date().toISOString() })
+      .eq('id', user.id);
+
+    return { user, error: null };
+  } catch (error) {
+    console.error('Login failed:', error);
+    return { user: null, error: 'Login failed. Please try again.' };
+  }
+};
 
 // Package operations
 export const getPackages = async () => {
@@ -221,6 +312,21 @@ export const getBookings = async () => {
       eco_stays (*)
     `)
     .order('created_at', { ascending: false });
+  
+  return { data, error };
+};
+
+export const updateBookingStatus = async (bookingId: string, status: string, adminNotes?: string) => {
+  const { data, error } = await supabase
+    .from('bookings')
+    .update({ 
+      status, 
+      admin_notes: adminNotes,
+      confirmation_sent: status === 'Confirmed'
+    })
+    .eq('id', bookingId)
+    .select()
+    .single();
   
   return { data, error };
 };

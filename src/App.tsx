@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Header from './components/Layout/Header';
 import Footer from './components/Layout/Footer';
 import HeroSection from './components/Hero/HeroSection';
@@ -72,7 +71,12 @@ function App() {
     }
   ];
 
-  const HomePage = () => (
+  // Check if we're on admin route
+  if (window.location.pathname === '/admin') {
+    return <AdminPanel />;
+  }
+
+  return (
     <div className="min-h-screen bg-white">
       <Header 
         onAuthClick={() => setIsAuthModalOpen(true)}
@@ -125,15 +129,6 @@ function App() {
         Test Notification
       </button>
     </div>
-  );
-
-  return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/admin" element={<AdminPanel />} />
-      </Routes>
-    </Router>
   );
 }
 
