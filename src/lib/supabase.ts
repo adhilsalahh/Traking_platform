@@ -121,20 +121,46 @@ export interface AdminUser {
 // Create default admin user if it doesn't exist
 export const createDefaultAdmin = async () => {
   try {
-    // Check if admin user already exists
+    // Check if admin user already exists and get the current data
     const { data: existingAdmin } = await supabase
       .from('admin_users')
-      .select('id')
+      .select('id, password_hash')
       .eq('username', 'admin')
       .limit(1);
 
+    // Hash the default password
+    const defaultPassword = 'admin123';
+    const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+
     if (existingAdmin && existingAdmin.length > 0) {
-      console.log('Admin user already exists');
+      // Admin exists, but check if password hash is correct
+      const currentAdmin = existingAdmin[0];
+      
+      // Verify if the current password hash matches the default password
+      const isPasswordCorrect = await bcrypt.compare(defaultPassword, currentAdmin.password_hash);
+      
+      if (!isPasswordCorrect) {
+        // Update the password hash to match the default password
+        const { error: updateError } = await supabase
+          .from('admin_users')
+          .update({ 
+            password_hash: hashedPassword,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', currentAdmin.id);
+
+        if (updateError) {
+          console.error('Error updating admin password:', updateError);
+          return { success: false, error: updateError.message };
+        }
+        
+        console.log('Admin password updated to match default credentials');
+        return { success: true, message: 'Admin password updated successfully' };
+      }
+      
+      console.log('Admin user already exists with correct password');
       return { success: true, message: 'Admin user already exists' };
     }
-
-    // Hash the default password
-    const hashedPassword = await bcrypt.hash('admin123', 10);
 
     // Create the admin user
     const { data, error } = await supabase
