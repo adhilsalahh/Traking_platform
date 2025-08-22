@@ -1,106 +1,91 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import PackageCard from './PackageCard';
 import BookingModal from '../Booking/BookingModal';
 import PackageDetailsModal from './PackageDetailsModal';
 import { Filter, Search } from 'lucide-react';
+import { getPackages, Package as SupabasePackage } from '../../lib/supabase'; // Import getPackages and the Package type
 
 const PackagesSection: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedPackage, setSelectedPackage] = useState<any>(null);
+  const [selectedPackage, setSelectedPackage] = useState<SupabasePackage | null>(null); 
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [packages, setPackages] = useState<SupabasePackage[]>([]); 
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const packages = [
-    {
-      id: '1',
-      title: 'Munnar Tea Garden Trek & Sunrise Experience',
-      image: 'https://images.pexels.com/photos/4321306/pexels-photo-4321306.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop',
-      price: 3500,
-      originalPrice: 4500,
-      duration: '2 Days, 1 Night',
-      groupSize: '6-12 people',
-      location: 'Munnar, Idukki',
-      rating: 4.8,
-      reviews: 156,
-      difficulty: 'Beginner' as const,
-      highlights: ['Sunrise at Top Station', 'Tea plantation guided tour', 'Traditional Kerala breakfast', 'Photography sessions'],
-      category: 'Trekking'
-    },
-    {
-      id: '2',
-      title: 'Wayanad Wildlife & Waterfall Adventure',
-      image: 'https://images.pexels.com/photos/3408354/pexels-photo-3408354.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop',
-      price: 5200,
-      duration: '3 Days, 2 Nights',
-      groupSize: '4-10 people',
-      location: 'Wayanad',
-      rating: 4.9,
-      reviews: 203,
-      difficulty: 'Intermediate' as const,
-      highlights: ['Chembra Peak trek', 'Soochipara Falls', 'Wildlife sanctuary visit', 'Bamboo rafting'],
-      category: 'Adventure'
-    },
-    {
-      id: '3',
-      title: 'Kumarakom Backwater Eco Stay Experience',
-      image: 'https://images.pexels.com/photos/3889742/pexels-photo-3889742.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop',
-      price: 6500,
-      originalPrice: 7800,
-      duration: '2 Days, 1 Night',
-      groupSize: '2-8 people',
-      location: 'Kumarakom, Kottayam',
-      rating: 4.7,
-      reviews: 89,
-      difficulty: 'Beginner' as const,
-      highlights: ['Traditional houseboat stay', 'Bird watching', 'Kerala cuisine cooking class', 'Village cycling tour'],
-      category: 'Eco Stay'
-    },
-    {
-      id: '4',
-      title: 'Idukki Arch Dam & Hill Station Trek',
-      image: 'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop',
-      price: 4200,
-      duration: '2 Days, 1 Night',
-      groupSize: '8-15 people',
-      location: 'Idukki',
-      rating: 4.6,
-      reviews: 124,
-      difficulty: 'Intermediate' as const,
-      highlights: ['Arch dam viewpoint', 'Hill station exploration', 'Spice plantation visit', 'Jeep safari'],
-      category: 'Trekking'
-    },
-    {
-      id: '5',
-      title: 'Agasthyakoodam Peak Challenge',
-      image: 'https://images.pexels.com/photos/1366919/pexels-photo-1366919.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop',
-      price: 8500,
-      duration: '4 Days, 3 Nights',
-      groupSize: '4-8 people',
-      location: 'Thiruvananthapuram',
-      rating: 4.9,
-      reviews: 67,
-      difficulty: 'Expert' as const,
-      highlights: ['Second highest peak in Kerala', 'Dense forest trekking', 'Rare flora and fauna', 'Camping under stars'],
-      category: 'Trekking'
-    },
-    {
-      id: '6',
-      title: 'Thekkady Spice Trail & Periyar Safari',
-      image: 'https://images.pexels.com/photos/3889743/pexels-photo-3889743.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop',
-      price: 4800,
-      originalPrice: 5500,
-      duration: '2 Days, 1 Night',
-      groupSize: '6-12 people',
-      location: 'Thekkady, Idukki',
-      rating: 4.8,
-      reviews: 198,
-      difficulty: 'Beginner' as const,
-      highlights: ['Periyar wildlife sanctuary', 'Spice plantation walk', 'Boat safari on Periyar Lake', 'Kathakali performance'],
-      category: 'Adventure'
-    }
-  ];
+  useEffect(() => {
+    const fetchPackagesData = async () => {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        const { data, error } = await getPackages();
+        if (error) {
+          throw new Error(error.message || 'Failed to fetch packages');
+        }
+        setPackages(data || []);
+      } catch (err) {
+        console.error('Error fetching packages:', err);
+        // Fallback to mock data when Supabase is not configured
+        const mockPackages = [
+          {
+            id: 'mock-1',
+            title: 'Munnar Tea Garden Trek & Sunrise Experience',
+            description: 'Experience the misty mountains and tea plantations of Munnar',
+            image_url: 'https://images.pexels.com/photos/4321306/pexels-photo-4321306.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop',
+            price: 3500,
+            original_price: 4500,
+            duration: '2 Days, 1 Night',
+            group_size: '6-12 people',
+            location: 'Munnar, Idukki',
+            difficulty: 'Beginner' as const,
+            category: 'Trekking',
+            highlights: ['Sunrise at Top Station', 'Tea plantation guided tour', 'Traditional Kerala breakfast', 'Photography sessions'],
+            inclusions: ['Professional trek guide', 'All meals during trek', 'Accommodation', 'Safety equipment'],
+            exclusions: ['Personal trekking gear', 'Travel insurance', 'Personal expenses'],
+            itinerary: [],
+            rating: 4.8,
+            review_count: 124,
+            booking_count: 45,
+            status: 'Active' as const,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          },
+          {
+            id: 'mock-2',
+            title: 'Wayanad Wildlife & Waterfall Adventure',
+            description: 'Wildlife safari and waterfall adventure with challenging treks',
+            image_url: 'https://images.pexels.com/photos/3408354/pexels-photo-3408354.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop',
+            price: 5200,
+            original_price: undefined,
+            duration: '3 Days, 2 Nights',
+            group_size: '4-10 people',
+            location: 'Wayanad',
+            difficulty: 'Intermediate' as const,
+            category: 'Adventure',
+            highlights: ['Chembra Peak trek', 'Soochipara Falls', 'Wildlife sanctuary visit', 'Bamboo rafting'],
+            inclusions: ['Professional trek guide', 'All meals during trek', 'Accommodation', 'Safety equipment'],
+            exclusions: ['Personal trekking gear', 'Travel insurance', 'Personal expenses'],
+            itinerary: [],
+            rating: 4.9,
+            review_count: 89,
+            booking_count: 32,
+            status: 'Active' as const,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }
+        ];
+        setPackages(mockPackages);
+        setError('Using demo data - Supabase not configured');
+      }
+      setLoading(false);
+    };
+
+    fetchPackagesData();
+  }, []);
 
   const filters = ['All', 'Trekking', 'Adventure', 'Eco Stay'];
 
@@ -111,22 +96,22 @@ const PackagesSection: React.FC = () => {
     return matchesFilter && matchesSearch;
   });
 
-  const handleBookNow = (pkg: any) => {
+  const handleBookNow = (pkg: SupabasePackage) => {
     setSelectedPackage(pkg);
     setIsBookingModalOpen(true);
   };
 
-  const handleViewDetails = (pkg: any) => {
+  const handleViewDetails = (pkg: SupabasePackage) => {
     setSelectedPackage(pkg);
     setIsDetailsModalOpen(true);
   };
 
-  const handleShare = (pkg: any) => {
+  const handleShare = (pkg: SupabasePackage) => {
     if (navigator.share) {
       navigator.share({
         title: pkg.title,
         text: `Check out this amazing trekking package: ${pkg.title} - Starting from ₹${pkg.price}`,
-        url: window.location.href
+        url: window.location.href,
       });
     } else {
       // Fallback for browsers that don't support Web Share API
@@ -135,6 +120,22 @@ const PackagesSection: React.FC = () => {
       alert('Package details copied to clipboard!');
     }
   };
+
+  if (loading) {
+    return (
+      <section id="packages" className="py-20 bg-gray-50 text-center">
+        <p className="text-gray-600 text-lg">Loading packages...</p>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section id="packages" className="py-20 bg-gray-50 text-center">
+        <p className="text-red-600 text-lg">{error}</p>
+      </section>
+    );
+  }
 
   return (
     <section id="packages" className="py-20 bg-gray-50">
@@ -199,7 +200,18 @@ const PackagesSection: React.FC = () => {
               viewport={{ once: true }}
             >
               <PackageCard 
-                {...pkg} 
+                id={pkg.id}
+                title={pkg.title} 
+                image={pkg.image_url || 'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop'} 
+                price={pkg.price}
+                originalPrice={pkg.original_price || undefined}
+                duration={pkg.duration}
+                groupSize={pkg.group_size}
+                location={pkg.location}
+                rating={pkg.rating || 0}
+                reviews={pkg.review_count || 0}
+                difficulty={pkg.difficulty as 'Beginner' | 'Intermediate' | 'Expert'}
+                highlights={pkg.highlights || []}
                 onBookNow={() => handleBookNow(pkg)}
                 onViewDetails={() => handleViewDetails(pkg)}
                 onShare={() => handleShare(pkg)}
@@ -226,7 +238,21 @@ const PackagesSection: React.FC = () => {
               setIsDetailsModalOpen(false);
               setIsBookingModalOpen(true);
             }}
-            packageData={selectedPackage}
+            packageData={{
+              id: selectedPackage.id,
+              title: selectedPackage.title,
+              image: selectedPackage.image_url || 'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop',
+              price: selectedPackage.price,
+              originalPrice: selectedPackage.original_price || undefined,
+              duration: selectedPackage.duration,
+              groupSize: selectedPackage.group_size,
+              location: selectedPackage.location,
+              rating: selectedPackage.rating || 0,
+              reviews: selectedPackage.review_count || 0,
+              difficulty: selectedPackage.difficulty as 'Beginner' | 'Intermediate' | 'Expert',
+              highlights: selectedPackage.highlights || [],
+              category: selectedPackage.category
+            }}
           />
         )}
 
@@ -244,7 +270,7 @@ const PackagesSection: React.FC = () => {
               price: selectedPackage.price,
               duration: selectedPackage.duration,
               location: selectedPackage.location,
-              image: selectedPackage.image
+              image: selectedPackage.image_url || 'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop'
             }}
           />
         )}

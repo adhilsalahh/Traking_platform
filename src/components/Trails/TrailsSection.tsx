@@ -1,93 +1,106 @@
 import React from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Mountain, Clock, TrendingUp, Users } from 'lucide-react';
 import BookingModal from '../Booking/BookingModal';
 import TrailDetailsModal from './TrailDetailsModal';
+import { getTrails, Trail as SupabaseTrail } from '../../lib/supabase'; // Import getTrails and the Trail type
 
 const TrailsSection: React.FC = () => {
-  const [selectedTrail, setSelectedTrail] = useState<any>(null);
+  const [selectedTrail, setSelectedTrail] = useState<SupabaseTrail | null>(null); // Use SupabaseTrail type
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [trails, setTrails] = useState<SupabaseTrail[]>([]); // State to store fetched trails
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const trails = [
-    {
-      id: 1,
-      name: 'Anamudi Peak Trail',
-      difficulty: 'Expert',
-      duration: '6-8 hours',
-      elevation: '2,695m',
-      image: 'https://images.pexels.com/photos/1366919/pexels-photo-1366919.jpeg?auto=compress&cs=tinysrgb&w=600&h=400&fit=crop',
-      description: 'The highest peak in South India offers breathtaking panoramic views.',
-      features: ['Highest peak in South India', 'Rare Neelakurinji flowers', 'Shola forests', 'Wildlife spotting'],
-      difficultyColor: 'bg-red-100 text-red-800'
-    },
-    {
-      id: 2,
-      name: 'Chembra Peak Circuit',
-      difficulty: 'Intermediate',
-      duration: '4-5 hours',
-      elevation: '2,100m',
-      image: 'https://images.pexels.com/photos/3408354/pexels-photo-3408354.jpeg?auto=compress&cs=tinysrgb&w=600&h=400&fit=crop',
-      description: 'Famous for its heart-shaped lake and stunning valley views.',
-      features: ['Heart-shaped lake', 'Valley views', 'Tea plantations', 'Cool climate'],
-      difficultyColor: 'bg-yellow-100 text-yellow-800'
-    },
-    {
-      id: 3,
-      name: 'Meesapulimala Trek',
-      difficulty: 'Intermediate',
-      duration: '5-6 hours',
-      elevation: '2,640m',
-      image: 'https://images.pexels.com/photos/4321306/pexels-photo-4321306.jpeg?auto=compress&cs=tinysrgb&w=600&h=400&fit=crop',
-      description: 'Second highest peak with rolling grasslands and mist-covered valleys.',
-      features: ['Rolling grasslands', 'Mist-covered valleys', '360-degree views', 'Sunrise point'],
-      difficultyColor: 'bg-yellow-100 text-yellow-800'
-    },
-    {
-      id: 4,
-      name: 'Ponmudi Hills Walk',
-      difficulty: 'Beginner',
-      duration: '2-3 hours',
-      elevation: '1,100m',
-      image: 'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=600&h=400&fit=crop',
-      description: 'Gentle trails through lush green forests and golden grasslands.',
-      features: ['Lush forests', 'Golden grasslands', 'Waterfalls', 'Easy accessibility'],
-      difficultyColor: 'bg-green-100 text-green-800'
-    },
-    {
-      id: 5,
-      name: 'Vagamon Meadows Trail',
-      difficulty: 'Beginner',
-      duration: '3-4 hours',
-      elevation: '1,200m',
-      image: 'https://images.pexels.com/photos/3889742/pexels-photo-3889742.jpeg?auto=compress&cs=tinysrgb&w=600&h=400&fit=crop',
-      description: 'Gentle rolling hills with pine forests and meadows.',
-      features: ['Pine forests', 'Rolling meadows', 'Cool climate', 'Perfect for families'],
-      difficultyColor: 'bg-green-100 text-green-800'
-    },
-    {
-      id: 6,
-      name: 'Kurinjimala Sanctuary Trek',
-      difficulty: 'Expert',
-      duration: '7-8 hours',
-      elevation: '2,019m',
-      image: 'https://images.pexels.com/photos/3889743/pexels-photo-3889743.jpeg?auto=compress&cs=tinysrgb&w=600&h=400&fit=crop',
-      description: 'Challenging trek through protected wildlife sanctuary.',
-      features: ['Wildlife sanctuary', 'Rare flora and fauna', 'Neelakurinji blooms', 'Permit required'],
-      difficultyColor: 'bg-red-100 text-red-800'
-    }
-  ];
+  useEffect(() => {
+    const fetchTrailsData = async () => {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        const { data, error } = await getTrails();
+        if (error) {
+          throw new Error(error.message || 'Failed to fetch trails');
+        }
+        setTrails(data || []);
+      } catch (err) {
+        console.error('Error fetching trails:', err);
+        // Fallback to mock data when Supabase is not configured
+        const mockTrails = [
+          {
+            id: 'mock-trail-1',
+            name: 'Anamudi Peak Trail',
+            description: 'The highest peak in South India offers breathtaking panoramic views.',
+            image_url: 'https://images.pexels.com/photos/1366919/pexels-photo-1366919.jpeg?auto=compress&cs=tinysrgb&w=600&h=400&fit=crop',
+            difficulty: 'Expert' as const,
+            duration: '6-8 hours',
+            elevation: '2,695m',
+            location: 'Munnar',
+            features: ['Highest peak in South India', 'Rare Neelakurinji flowers', 'Shola forests', 'Wildlife spotting'],
+            status: 'Active' as const,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          },
+          {
+            id: 'mock-trail-2',
+            name: 'Chembra Peak Circuit',
+            description: 'Famous for its heart-shaped lake and stunning valley views.',
+            image_url: 'https://images.pexels.com/photos/3408354/pexels-photo-3408354.jpeg?auto=compress&cs=tinysrgb&w=600&h=400&fit=crop',
+            difficulty: 'Intermediate' as const,
+            duration: '4-5 hours',
+            elevation: '2,100m',
+            location: 'Wayanad',
+            features: ['Heart-shaped lake', 'Valley views', 'Tea plantations', 'Cool climate'],
+            status: 'Active' as const,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }
+        ];
+        setTrails(mockTrails);
+        setError('Using demo data - Supabase not configured');
+      }
+      setLoading(false);
+    };
 
-  const handleBookNow = (trail: any) => {
+    fetchTrailsData();
+  }, []);
+
+  const handleBookNow = (trail: SupabaseTrail) => { // Use SupabaseTrail type
     setSelectedTrail(trail);
     setIsBookingModalOpen(true);
   };
 
-  const handleViewDetails = (trail: any) => {
+  const handleViewDetails = (trail: SupabaseTrail) => { // Use SupabaseTrail type
     setSelectedTrail(trail);
     setIsDetailsModalOpen(true);
   };
+
+  const getDifficultyColor = (level: string) => {
+    switch (level) {
+      case 'Beginner': return 'bg-green-100 text-green-800';
+      case 'Intermediate': return 'bg-yellow-100 text-yellow-800';
+      case 'Expert': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  if (loading) {
+    return (
+      <section id="trails" className="py-20 bg-white text-center">
+        <p className="text-gray-600 text-lg">Loading trails...</p>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section id="trails" className="py-20 bg-white text-center">
+        <p className="text-red-600 text-lg">{error}</p>
+      </section>
+    );
+  }
 
   return (
     <>
@@ -139,12 +152,12 @@ const TrailsSection: React.FC = () => {
             >
               <div className="relative overflow-hidden">
                 <img 
-                  src={trail.image} 
+                  src={trail.image_url || 'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=600&h=400&fit=crop'} // Use image_url
                   alt={trail.name}
                   className="w-full h-48 object-cover transition-transform duration-700 hover:scale-110"
                 />
                 <div className="absolute top-4 left-4">
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${trail.difficultyColor}`}>
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${getDifficultyColor(trail.difficulty)}`}>
                     {trail.difficulty}
                   </span>
                 </div>
@@ -174,8 +187,8 @@ const TrailsSection: React.FC = () => {
                 <div className="mb-6">
                   <h4 className="font-semibold text-gray-900 mb-2">Trail Highlights:</h4>
                   <ul className="space-y-1">
-                    {trail.features.slice(0, 3).map((feature, index) => (
-                      <li key={index} className="flex items-center text-sm text-gray-600">
+                    {trail.features.slice(0, 3).map((feature, featureIndex) => (
+                      <li key={featureIndex} className="flex items-center text-sm text-gray-600">
                         <div className="w-2 h-2 bg-emerald-400 rounded-full mr-2"></div>
                         {feature}
                       </li>
@@ -220,7 +233,18 @@ const TrailsSection: React.FC = () => {
             setIsDetailsModalOpen(false);
             setIsBookingModalOpen(true);
           }}
-          trailData={selectedTrail}
+          trailData={{
+            id: selectedTrail.id,
+            name: selectedTrail.name,
+            image: selectedTrail.image_url || 'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=600&h=400&fit=crop',
+            difficulty: selectedTrail.difficulty as 'Beginner' | 'Intermediate' | 'Expert',
+            duration: selectedTrail.duration,
+            elevation: selectedTrail.elevation,
+            location: selectedTrail.location,
+            description: selectedTrail.description || '',
+            features: selectedTrail.features || [],
+            difficultyColor: getDifficultyColor(selectedTrail.difficulty)
+          }}
         />
       )}
 
@@ -233,12 +257,12 @@ const TrailsSection: React.FC = () => {
             setSelectedTrail(null);
           }}
           packageData={{
-            id: selectedTrail.id.toString(),
+            id: selectedTrail.id,
             title: selectedTrail.name,
-            price: 2500, // Default trail price
+            price: 2500, // Default trail price - consider adding price to Supabase trails table
             duration: selectedTrail.duration,
-            location: selectedTrail.location,
-            image: selectedTrail.image
+            location: selectedTrail.location, // Pass location from fetched data
+            image: selectedTrail.image_url || 'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&w=600&h=400&fit=crop'
           }}
           bookingType="trail"
         />
