@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { Menu, X, Mountain } from 'lucide-react';
+import AdminLoginModal from '../Auth/AdminLoginModal';
 
 interface HeaderProps {
   onAuthClick?: () => void;
-  onAdminClick?: () => void;
 }
 
-export default function Header({ onAuthClick, onAdminClick }: HeaderProps) {
+export default function Header({ onAuthClick }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -55,14 +56,12 @@ export default function Header({ onAuthClick, onAdminClick }: HeaderProps) {
                 Sign In
               </button>
             )}
-            {onAdminClick && (
-              <button
-                onClick={onAdminClick}
-                className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
-              >
-                Admin
-              </button>
-            )}
+            <button
+              onClick={() => setIsAdminLoginOpen(true)}
+              className="text-gray-600 hover:text-green-600 transition-colors text-sm"
+            >
+              Admin Login
+            </button>
           </div>
 
           {/* Mobile Menu Button */}
@@ -136,22 +135,25 @@ export default function Header({ onAuthClick, onAdminClick }: HeaderProps) {
                     Sign In
                   </button>
                 )}
-                {onAdminClick && (
-                  <button
-                    onClick={() => {
-                      onAdminClick();
-                      setIsMenuOpen(false);
-                    }}
-                    className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors text-left"
-                  >
-                    Admin
-                  </button>
-                )}
+                <button
+                  onClick={() => {
+                    setIsAdminLoginOpen(true);
+                    setIsMenuOpen(false);
+                  }}
+                  className="text-gray-600 hover:text-green-600 transition-colors text-left"
+                >
+                  Admin Login
+                </button>
               </div>
             </nav>
           </div>
         )}
       </div>
+      
+      <AdminLoginModal
+        isOpen={isAdminLoginOpen}
+        onClose={() => setIsAdminLoginOpen(false)}
+      />
     </header>
   );
 }

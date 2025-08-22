@@ -17,7 +17,7 @@ interface PackageCardProps {
   highlights: string[];
   onBookNow: () => void;
   onShare: () => void;
-  onViewDetails: () => void;
+  onViewDetails?: () => void;
 }
 
 const PackageCard: React.FC<PackageCardProps> = ({
@@ -33,7 +33,8 @@ const PackageCard: React.FC<PackageCardProps> = ({
   difficulty,
   highlights,
   onBookNow,
-  onShare
+  onShare,
+  onViewDetails
 }) => {
   const getDifficultyColor = (level: string) => {
     switch (level) {
@@ -137,14 +138,26 @@ const PackageCard: React.FC<PackageCardProps> = ({
             <span className="text-gray-600 text-sm">/person</span>
           </div>
           
-          <motion.button 
-            className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors"
-            onClick={onBookNow}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            Book Now
-          </motion.button>
+          <div className="flex space-x-2">
+            {onViewDetails && (
+              <motion.button 
+                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors text-sm"
+                onClick={onViewDetails}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                View
+              </motion.button>
+            )}
+            <motion.button 
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors text-sm"
+              onClick={onBookNow}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              Book Now
+            </motion.button>
+          </div>
         </div>
       </div>
     </motion.div>

@@ -13,9 +13,10 @@ interface BookingModalProps {
     location: string;
     image: string;
   };
+  bookingType?: 'package' | 'trail' | 'eco_stay';
 }
 
-const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, packageData }) => {
+const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, packageData, bookingType = 'package' }) => {
   const [step, setStep] = useState(1);
   const [bookingData, setBookingData] = useState({
     name: '',
@@ -48,43 +49,77 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, packageDat
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Send booking confirmation to admin
-    const adminNotification = {
-      to: 'adhilsalahhk@gmail.com',
-      phone: '8129464465',
-      subject: `New Booking: ${packageData.title}`,
-      message: `
-        New booking received!
-        
-        Package: ${packageData.title}
-        Customer: ${bookingData.name}
-        Email: ${bookingData.email}
-        Phone: ${bookingData.phone}
-        Date: ${bookingData.date}
-        Participants: ${bookingData.participants}
-        Total Amount: ₹${totalAmount.toLocaleString()}
-        
-        Emergency Contact: ${bookingData.emergencyContact} (${bookingData.emergencyPhone})
-        Special Requests: ${bookingData.specialRequests || 'None'}
-        
-        Please confirm this booking by replying "CONFIRMED" to send confirmation to customer.
-      `
-    };
+    // Save booking to database
+    saveBookingToDatabase();
+  };
 
-    // Simulate sending notifications
-    console.log('Admin Email Notification:', adminNotification);
-    console.log('Admin WhatsApp Message:', `New booking from ${bookingData.name} for ${packageData.title}. Total: ₹${totalAmount.toLocaleString()}. Reply CONFIRMED to approve.`);
-    
-    // Show success message
-    alert(`Booking submitted successfully! 
-    
-    ✅ Confirmation sent to admin
-    ✅ You will receive confirmation via email and WhatsApp once approved
-    ✅ Booking ID: BK${Date.now().toString().slice(-6)}
-    
-    Our team will contact you within 2 hours to confirm your booking.`);
-    
-    onClose();
+  const saveBookingToDatabase = async () => {
+    try {
+      const { createBooking } = await import('../../lib/supabase');
+      
+      const bookingPayload = {
+        name: bookingData.name,
+        email: bookingData.email,
+        phone: bookingData.phone,
+        emergencyContact: bookingData.emergencyContact,
+        emergencyPhone: bookingData.emergencyPhone,
+        itemId: packageData.id,
+        bookingType: bookingType,
+        participants: bookingData.participants,
+        date: bookingData.date,
+        specialRequests: bookingData.specialRequests,
+        totalAmount: totalAmount
+      };
+
+      const { data, error } = await createBooking(bookingPayload);
+      
+      if (error) {
+        alert('Error submitting booking. Please try again.');
+        return;
+      }
+
+      // Send notifications to admin
+      const adminNotification = {
+        to: 'adhilsalahhk@gmail.com',
+        phone: '8129464465',
+        subject: `New Booking: ${packageData.title}`,
+        message: `
+          New booking received!
+          
+          ${bookingType === 'package' ? 'Package' : bookingType === 'trail' ? 'Trail' : 'Eco Stay'}: ${packageData.title}
+          Customer: ${bookingData.name}
+          Email: ${bookingData.email}
+          Phone: ${bookingData.phone}
+          Date: ${bookingData.date}
+          Participants: ${bookingData.participants}
+          Total Amount: ₹${totalAmount.toLocaleString()}
+          
+          Emergency Contact: ${bookingData.emergencyContact} (${bookingData.emergencyPhone})
+          Special Requests: ${bookingData.specialRequests || 'None'}
+          
+          Please confirm this booking in the admin panel to send confirmation to customer.
+        `
+      };
+
+      // Simulate sending notifications
+      console.log('Admin Email Notification:', adminNotification);
+      console.log('Admin WhatsApp Message:', `New booking from ${bookingData.name} for ${packageData.title}. Total: ₹${totalAmount.toLocaleString()}. Check admin panel to confirm.`);
+      
+      // Show success message
+      alert(`Booking submitted successfully! 
+      
+      ✅ Booking saved to database
+      ✅ Admin notification sent
+      ✅ You will receive confirmation via email and WhatsApp once approved
+      ✅ Booking ID: ${data?.booking_id || 'BK' + Date.now().toString().slice(-6)}
+      
+      Our team will contact you within 2 hours to confirm your booking.`);
+      
+      onClose();
+    } catch (error) {
+      console.error('Error saving booking:', error);
+      alert('Error submitting booking. Please try again.');
+    }
   };
 
   const totalAmount = packageData.price * bookingData.participants;
@@ -103,7 +138,9 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, packageDat
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-2xl font-bold text-gray-900">Book Your Adventure</h2>
-              <p className="text-gray-600">{packageData.title}</p>
+              <p className="text-gray-600">
+                {bookingType === 'package' ? 'Package' : bookingType === 'trail' ? 'Trail' : 'Eco Stay'}: {packageData.title}
+              </p>
             </div>
             <button
               onClick={onClose}

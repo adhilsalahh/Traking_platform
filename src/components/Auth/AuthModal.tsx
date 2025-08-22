@@ -7,10 +7,9 @@ interface AuthModalProps {
   onClose: () => void;
   mode: 'signin' | 'signup';
   onModeChange: (mode: 'signin' | 'signup') => void;
-  adminOnly?: boolean;
 }
 
-const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onModeChange, adminOnly = false }) => {
+const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onModeChange }) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -51,7 +50,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onModeChan
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900">
-              {adminOnly ? 'Admin Access' : mode === 'signin' ? 'Welcome Back' : 'Create Account'}
+              {mode === 'signin' ? 'Welcome Back' : 'Create Account'}
             </h2>
             <button
               onClick={onClose}
@@ -62,7 +61,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onModeChan
           </div>
 
           {/* Sign In/Sign Up Toggle for Sign In (only for non-admin) */}
-          {mode === 'signin' && !adminOnly && (
+          {mode === 'signin' && (
             <div className="flex bg-gray-100 rounded-lg p-1 mb-6">
               <button
                 type="button"
@@ -94,7 +93,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onModeChan
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Name field for signup */}
-            {(mode === 'signup' || adminOnly) && (
+            {mode === 'signup' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Full Name
@@ -117,10 +116,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onModeChan
             {/* Email/Phone field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                {adminOnly || mode === 'signup' ? 'Email Address' : loginMethod === 'email' ? 'Email Address' : 'Phone Number'}
+                {mode === 'signup' ? 'Email Address' : loginMethod === 'email' ? 'Email Address' : 'Phone Number'}
               </label>
               <div className="relative">
-                {(adminOnly || mode === 'signup' || loginMethod === 'email') ? (
+                {(mode === 'signup' || loginMethod === 'email') ? (
                   <>
                     <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
                     <input
@@ -151,7 +150,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onModeChan
             </div>
 
             {/* Phone field for signup */}
-            {(mode === 'signup' || adminOnly) && (
+            {mode === 'signup' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Phone Number
@@ -197,7 +196,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onModeChan
             </div>
 
             {/* Confirm Password field for signup */}
-            {(mode === 'signup' || adminOnly) && (
+            {mode === 'signup' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Confirm Password
@@ -230,13 +229,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onModeChan
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              {adminOnly ? 'Admin Sign Up' : mode === 'signin' ? 'Sign In' : 'Create Account'}
+              {mode === 'signin' ? 'Sign In' : 'Create Account'}
             </motion.button>
           </form>
 
           {/* Footer */}
-          {!adminOnly && (
-            <div className="mt-6 text-center">
+          <div className="mt-6 text-center">
             <p className="text-gray-600">
               {mode === 'signin' ? "Don't have an account? " : "Already have an account? "}
               <button
@@ -247,7 +245,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onModeChan
               </button>
             </p>
           </div>
-          )}
         </div>
       </motion.div>
     </div>

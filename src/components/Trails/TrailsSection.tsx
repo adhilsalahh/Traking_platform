@@ -1,8 +1,15 @@
 import React from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Mountain, Clock, TrendingUp, Users } from 'lucide-react';
+import BookingModal from '../Booking/BookingModal';
+import TrailDetailsModal from './TrailDetailsModal';
 
 const TrailsSection: React.FC = () => {
+  const [selectedTrail, setSelectedTrail] = useState<any>(null);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+
   const trails = [
     {
       id: 1,
@@ -72,8 +79,19 @@ const TrailsSection: React.FC = () => {
     }
   ];
 
+  const handleBookNow = (trail: any) => {
+    setSelectedTrail(trail);
+    setIsBookingModalOpen(true);
+  };
+
+  const handleViewDetails = (trail: any) => {
+    setSelectedTrail(trail);
+    setIsDetailsModalOpen(true);
+  };
+
   return (
-    <section id="trails" className="py-20 bg-white">
+    <>
+      <section id="trails" className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div 
           className="text-center mb-12"
@@ -165,19 +183,67 @@ const TrailsSection: React.FC = () => {
                   </ul>
                 </div>
 
-                <motion.button 
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-lg font-semibold transition-colors"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  View Trail Details
-                </motion.button>
+                <div className="flex space-x-2">
+                  <motion.button 
+                    className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-3 rounded-lg font-semibold transition-colors"
+                    onClick={() => handleViewDetails(trail)}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    View Details
+                  </motion.button>
+                  <motion.button 
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-lg font-semibold transition-colors"
+                    onClick={() => handleBookNow(trail)}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Book Now
+                  </motion.button>
+                </div>
               </div>
             </motion.div>
           ))}
         </div>
       </div>
-    </section>
+      </section>
+
+      {/* Trail Details Modal */}
+      {selectedTrail && (
+        <TrailDetailsModal
+          isOpen={isDetailsModalOpen}
+          onClose={() => {
+            setIsDetailsModalOpen(false);
+            setSelectedTrail(null);
+          }}
+          onBookNow={() => {
+            setIsDetailsModalOpen(false);
+            setIsBookingModalOpen(true);
+          }}
+          trailData={selectedTrail}
+        />
+      )}
+
+      {/* Booking Modal */}
+      {selectedTrail && (
+        <BookingModal
+          isOpen={isBookingModalOpen}
+          onClose={() => {
+            setIsBookingModalOpen(false);
+            setSelectedTrail(null);
+          }}
+          packageData={{
+            id: selectedTrail.id.toString(),
+            title: selectedTrail.name,
+            price: 2500, // Default trail price
+            duration: selectedTrail.duration,
+            location: selectedTrail.location,
+            image: selectedTrail.image
+          }}
+          bookingType="trail"
+        />
+      )}
+    </>
   );
 };
 
