@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { X, User, Lock, Eye, EyeOff } from 'lucide-react';
-import { adminLogin } from '../../lib/supabase';
+import { adminLogin } from '../../lib/auth';
 
 interface AdminLoginModalProps {
   isOpen: boolean;
@@ -16,6 +16,7 @@ const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClose }) =>
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   if (!isOpen) return null;
 
@@ -23,6 +24,7 @@ const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClose }) =>
     e.preventDefault();
     setLoading(true);
     setError('');
+    setSuccess('');
 
     try {
       const { user, error } = await adminLogin(formData.username, formData.password);
@@ -33,12 +35,12 @@ const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClose }) =>
       }
 
       if (user) {
-        // Store admin session
-        localStorage.setItem('adminUser', JSON.stringify(user));
-        
+        setSuccess('Login successful! Redirecting...');
         // Redirect to admin panel
-        window.location.href = '/admin';
-        onClose();
+        setTimeout(() => {
+          window.location.href = '/admin';
+          onClose();
+        }, 1000);
       }
     } catch (err) {
       setError('Login failed. Please try again.');
@@ -87,6 +89,12 @@ const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClose }) =>
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
               <p className="text-sm text-red-700">{error}</p>
+            </div>
+          )}
+
+          {success && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+              <p className="text-sm text-green-700">{success}</p>
             </div>
           )}
 
@@ -143,7 +151,7 @@ const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClose }) =>
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              {loading ? 'Signing In...' : 'Sign In to Admin Panel'}
+              {loading ? 'Signing In...' : success ? 'Redirecting...' : 'Sign In to Admin Panel'}
             </motion.button>
           </form>
         </div>

@@ -115,37 +115,6 @@ export interface AdminUser {
   updated_at: string;
 }
 
-// Admin authentication
-export const adminLogin = async (username: string, password: string) => {
-  try {
-    const { data, error } = await supabase
-      .from('admin_users')
-      .select('*')
-      .eq('username', username)
-      .eq('is_active', true)
-      .single();
-
-    if (error || !data) {
-      return { user: null, error: 'Invalid username or user not found' };
-    }
-
-    // Simple password check for demo (in production, use bcrypt.compare)
-    if (data.password_hash !== password) {
-      return { user: null, error: 'Invalid password' };
-    }
-
-    // Update last login
-    await supabase
-      .from('admin_users')
-      .update({ last_login: new Date().toISOString() })
-      .eq('id', data.id);
-
-    return { user: data, error: null };
-  } catch (error) {
-    return { user: null, error: 'Login failed. Please try again.' };
-  }
-};
-
 // Package operations
 export const getPackages = async () => {
   const { data, error } = await supabase
@@ -252,21 +221,6 @@ export const getBookings = async () => {
       eco_stays (*)
     `)
     .order('created_at', { ascending: false });
-  
-  return { data, error };
-};
-
-export const updateBookingStatus = async (bookingId: string, status: string, adminNotes?: string) => {
-  const { data, error } = await supabase
-    .from('bookings')
-    .update({ 
-      status, 
-      admin_notes: adminNotes,
-      confirmation_sent: status === 'Confirmed'
-    })
-    .eq('id', bookingId)
-    .select()
-    .single();
   
   return { data, error };
 };
