@@ -1,10 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://demo.supabase.co';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'demo-anon-key';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Missing Supabase environment variables. Please check your .env file.');
+// Only show warning if both are missing (not using fallbacks)
+if (!import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+  console.warn('Using demo Supabase configuration. For production, set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.');
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -117,8 +118,6 @@ export interface AdminUser {
 // Admin authentication
 export const adminLogin = async (username: string, password: string) => {
   try {
-    // In a real app, you'd hash the password and compare
-    // For demo purposes, we'll use simple comparison
     const { data, error } = await supabase
       .from('admin_users')
       .select('*')
@@ -127,12 +126,12 @@ export const adminLogin = async (username: string, password: string) => {
       .single();
 
     if (error || !data) {
-      throw new Error('Invalid credentials');
+      return { user: null, error: 'Invalid username or user not found' };
     }
 
-    // Simple password check (in production, use proper hashing)
-    if (password !== 'admin123') {
-      throw new Error('Invalid credentials');
+    // Simple password check for demo (in production, use bcrypt.compare)
+    if (data.password_hash !== password) {
+      return { user: null, error: 'Invalid password' };
     }
 
     // Update last login
@@ -143,7 +142,7 @@ export const adminLogin = async (username: string, password: string) => {
 
     return { user: data, error: null };
   } catch (error) {
-    return { user: null, error: error.message };
+    return { user: null, error: 'Login failed. Please try again.' };
   }
 };
 
