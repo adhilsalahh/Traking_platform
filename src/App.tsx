@@ -15,6 +15,7 @@ import AdminPanel from './components/Admin/AdminPanel';
 function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
+  const [isAdminSignup, setIsAdminSignup] = useState(false);
   const [currentView, setCurrentView] = useState<'main' | 'admin'>('main');
   const [notifications, setNotifications] = useState<any[]>([]);
 
@@ -80,7 +81,11 @@ function App() {
     <div className="min-h-screen bg-white">
       <Header 
         onAuthClick={() => setIsAuthModalOpen(true)}
-        onAdminClick={() => setCurrentView('admin')}
+        onAdminClick={() => {
+          setIsAdminSignup(true);
+          setAuthMode('signup');
+          setIsAuthModalOpen(true);
+        }}
       />
       
       <main>
@@ -110,9 +115,13 @@ function App() {
 
       <AuthModal
         isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
+        onClose={() => {
+          setIsAuthModalOpen(false);
+          setIsAdminSignup(false);
+        }}
         mode={authMode}
         onModeChange={setAuthMode}
+        adminOnly={isAdminSignup}
       />
 
       {/* Demo notification trigger */}

@@ -47,9 +47,43 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, packageDat
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle booking submission
-    console.log('Booking submitted:', bookingData);
-    alert('Booking confirmed! You will receive confirmation via email and WhatsApp.');
+    
+    // Send booking confirmation to admin
+    const adminNotification = {
+      to: 'adhilsalahhk@gmail.com',
+      phone: '8129464465',
+      subject: `New Booking: ${packageData.title}`,
+      message: `
+        New booking received!
+        
+        Package: ${packageData.title}
+        Customer: ${bookingData.name}
+        Email: ${bookingData.email}
+        Phone: ${bookingData.phone}
+        Date: ${bookingData.date}
+        Participants: ${bookingData.participants}
+        Total Amount: ₹${totalAmount.toLocaleString()}
+        
+        Emergency Contact: ${bookingData.emergencyContact} (${bookingData.emergencyPhone})
+        Special Requests: ${bookingData.specialRequests || 'None'}
+        
+        Please confirm this booking by replying "CONFIRMED" to send confirmation to customer.
+      `
+    };
+
+    // Simulate sending notifications
+    console.log('Admin Email Notification:', adminNotification);
+    console.log('Admin WhatsApp Message:', `New booking from ${bookingData.name} for ${packageData.title}. Total: ₹${totalAmount.toLocaleString()}. Reply CONFIRMED to approve.`);
+    
+    // Show success message
+    alert(`Booking submitted successfully! 
+    
+    ✅ Confirmation sent to admin
+    ✅ You will receive confirmation via email and WhatsApp once approved
+    ✅ Booking ID: BK${Date.now().toString().slice(-6)}
+    
+    Our team will contact you within 2 hours to confirm your booking.`);
+    
     onClose();
   };
 

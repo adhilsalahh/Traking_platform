@@ -17,6 +17,7 @@ interface PackageCardProps {
   highlights: string[];
   onBookNow: () => void;
   onShare: () => void;
+  onViewDetails: () => void;
 }
 
 const PackageCard: React.FC<PackageCardProps> = ({

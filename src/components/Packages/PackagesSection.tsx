@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import PackageCard from './PackageCard';
 import BookingModal from '../Booking/BookingModal';
+import PackageDetailsModal from './PackageDetailsModal';
 import { Filter, Search } from 'lucide-react';
 
 const PackagesSection: React.FC = () => {
@@ -9,6 +10,7 @@ const PackagesSection: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPackage, setSelectedPackage] = useState<any>(null);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   const packages = [
     {
@@ -114,6 +116,11 @@ const PackagesSection: React.FC = () => {
     setIsBookingModalOpen(true);
   };
 
+  const handleViewDetails = (pkg: any) => {
+    setSelectedPackage(pkg);
+    setIsDetailsModalOpen(true);
+  };
+
   const handleShare = (pkg: any) => {
     if (navigator.share) {
       navigator.share({
@@ -194,6 +201,7 @@ const PackagesSection: React.FC = () => {
               <PackageCard 
                 {...pkg} 
                 onBookNow={() => handleBookNow(pkg)}
+                onViewDetails={() => handleViewDetails(pkg)}
                 onShare={() => handleShare(pkg)}
               />
             </motion.div>
@@ -204,6 +212,22 @@ const PackagesSection: React.FC = () => {
           <div className="text-center py-12">
             <p className="text-gray-500 text-lg">No packages found matching your criteria.</p>
           </div>
+        )}
+
+        {/* Package Details Modal */}
+        {selectedPackage && (
+          <PackageDetailsModal
+            isOpen={isDetailsModalOpen}
+            onClose={() => {
+              setIsDetailsModalOpen(false);
+              setSelectedPackage(null);
+            }}
+            onBookNow={() => {
+              setIsDetailsModalOpen(false);
+              setIsBookingModalOpen(true);
+            }}
+            packageData={selectedPackage}
+          />
         )}
 
         {/* Booking Modal */}
