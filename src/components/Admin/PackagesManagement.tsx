@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Plus, Edit, Trash2, Eye, Package } from 'lucide-react';
-import { supabase, Package as SupabasePackage } from '../../lib/supabase';
+import { supabase, Package as SupabasePackage, uploadPackageImage, deletePackageImage } from '../../lib/supabase';
 
 const PackagesManagement: React.FC = () => {
   const [packages, setPackages] = useState<SupabasePackage[]>([]);
@@ -32,10 +32,15 @@ const PackagesManagement: React.FC = () => {
     }
   };
 
-  const deletePackage = async (packageId: string) => {
-    if (!confirm('Are you sure you want to delete this package?')) return;
+  const deletePackage = async (packageId: string, imageUrl?: string) => {
+    if (!confirm('Are you sure you want to delete this package? This action cannot be undone.')) return;
 
     try {
+      // Delete image from storage first if it exists
+      if (imageUrl) {
+        await deletePackageImage(imageUrl);
+      }
+
       const { error } = await supabase
         .from('packages')
         .delete()
@@ -230,7 +235,7 @@ const PackagesManagement: React.FC = () => {
                         <Edit className="h-4 w-4" />
                       </button>
                       <button
-                        onClick={() => deletePackage(pkg.id)}
+                        onClick={() => deletePackage(pkg.id, pkg.image_url)}
                         className="text-red-600 hover:text-red-900"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -281,8 +286,10 @@ const PackageModal: React.FC<PackageModalProps> = ({ package: pkg, isOpen, onClo
     highlights: [] as string[],
     inclusions: [] as string[],
     exclusions: [] as string[],
+    itinerary: [] as any[], // Added itinerary
     status: 'Draft' as 'Active' | 'Draft' | 'Inactive'
   });
+  const [selectedImage, setSelectedImage] = useState<File | null>(null); // State for image file
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -301,8 +308,10 @@ const PackageModal: React.FC<PackageModalProps> = ({ package: pkg, isOpen, onClo
         highlights: pkg.highlights || [],
         inclusions: pkg.inclusions || [],
         exclusions: pkg.exclusions || [],
+        itinerary: pkg.itinerary || [], // Set itinerary from pkg
         status: pkg.status || 'Draft'
       });
+      setSelectedImage(null); // Clear selected image when editing
     } else {
       setFormData({
         title: '',
@@ -318,19 +327,66 @@ const PackageModal: React.FC<PackageModalProps> = ({ package: pkg, isOpen, onClo
         highlights: [],
         inclusions: [],
         exclusions: [],
+        itinerary: [],
         status: 'Draft'
       });
+      setSelectedImage(null);
     }
   }, [pkg]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedImage(e.target.files[0]);
+    } else {
+      setSelectedImage(null);
+    }
+  };
+
+  const handleArrayChange = (e: React.ChangeEvent<HTMLTextAreaElement>, field: 'highlights' | 'inclusions' | 'exclusions') => {
+    setFormData({
+      ...formData,
+      [field]: e.target.value.split('\n').map(item => item.trim()).filter(item => item !== '')
+    });
+  };
+
+  const handleItineraryChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    try {
+      const parsedItinerary = JSON.parse(e.target.value);
+      setFormData({ ...formData, itinerary: parsedItinerary });
+    } catch (error) {
+      console.error("Invalid JSON for itinerary:", error);
+      // Optionally, set an error state for the user
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      let imageUrl = formData.image_url;
+
+      // If a new image is selected, upload it
+      if (selectedImage) {
+        if (pkg?.image_url) {
+          // Delete old image if updating and a new one is provided
+          await deletePackageImage(pkg.image_url);
+        }
+        imageUrl = await uploadPackageImage(selectedImage, formData.title);
+      } else if (!pkg?.image_url) {
+        // If no image selected and no existing image for a new package, set to null
+        imageUrl = '';
+      }
+
       const packageData = {
         ...formData,
-        original_price: formData.original_price || null
+        image_url: imageUrl,
+        original_price: formData.original_price || null,
+        // Ensure array fields are stored as text[]
+        highlights: formData.highlights,
+        inclusions: formData.inclusions,
+        exclusions: formData.exclusions,
+        itinerary: formData.itinerary, // Ensure itinerary is stored as jsonb
       };
 
       if (pkg) {
@@ -406,14 +462,20 @@ const PackageModal: React.FC<PackageModalProps> = ({ package: pkg, isOpen, onClo
 
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Image URL
+                  Image Upload
                 </label>
                 <input
-                  type="url"
-                  value={formData.image_url}
-                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
+                {formData.image_url && !selectedImage && (
+                  <p className="text-sm text-gray-500 mt-1">Current image: <a href={formData.image_url} target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">View Image</a></p>
+                )}
+                {selectedImage && (
+                  <p className="text-sm text-gray-500 mt-1">New image selected: {selectedImage.name}</p>
+                )}
               </div>
 
               <div>
@@ -509,6 +571,56 @@ const PackageModal: React.FC<PackageModalProps> = ({ package: pkg, isOpen, onClo
                   placeholder="e.g., Trekking, Adventure"
                   required
                 />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Highlights (one per line)
+                </label>
+                <textarea
+                  value={formData.highlights.join('\n')}
+                  onChange={(e) => handleArrayChange(e, 'highlights')}
+                  rows={3}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Inclusions (one per line)
+                </label>
+                <textarea
+                  value={formData.inclusions.join('\n')}
+                  onChange={(e) => handleArrayChange(e, 'inclusions')}
+                  rows={3}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Exclusions (one per line)
+                </label>
+                <textarea
+                  value={formData.exclusions.join('\n')}
+                  onChange={(e) => handleArrayChange(e, 'exclusions')}
+                  rows={3}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Itinerary (JSON format)
+                </label>
+                <textarea
+                  value={JSON.stringify(formData.itinerary, null, 2)}
+                  onChange={handleItineraryChange}
+                  rows={5}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 font-mono text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  placeholder={`[\n  {\n    "day": "Day 1",\n    "title": "Arrival & Setup",\n    "activities": ["Check-in", "Briefing"],\n    "time": "2:00 PM"\n  }\n]`}
+                />
+                <p className="text-xs text-gray-500 mt-1">Enter itinerary as a JSON array of objects. Each object should have 'day', 'title', 'activities' (array of strings), and 'time' properties.</p>
               </div>
 
               <div>

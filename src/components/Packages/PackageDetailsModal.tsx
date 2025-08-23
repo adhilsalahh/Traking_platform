@@ -20,6 +20,9 @@ interface PackageDetailsModalProps {
     difficulty: 'Beginner' | 'Intermediate' | 'Expert';
     highlights: string[];
     category: string;
+    inclusions: string[]; // Added
+    exclusions: string[]; // Added
+    itinerary?: { day: string; title: string; activities: string[]; time: string; }[]; // Added
   };
 }
 
@@ -40,46 +43,11 @@ const PackageDetailsModal: React.FC<PackageDetailsModalProps> = ({
     }
   };
 
-  const itinerary = [
-    {
-      day: 'Day 1',
-      title: 'Arrival & Base Camp Setup',
-      activities: ['Check-in at base camp', 'Welcome briefing', 'Equipment check', 'Evening tea with local snacks'],
-      time: '2:00 PM - 8:00 PM'
-    },
-    {
-      day: 'Day 2',
-      title: 'Main Trek & Exploration',
-      activities: ['Early morning start', 'Guided trek to main destination', 'Photography sessions', 'Traditional lunch'],
-      time: '6:00 AM - 6:00 PM'
-    },
-    {
-      day: 'Day 3',
-      title: 'Sunrise & Departure',
-      activities: ['Sunrise viewing', 'Breakfast', 'Return journey', 'Certificate presentation'],
-      time: '5:30 AM - 12:00 PM'
-    }
-  ];
+  // Use packageData.itinerary if available, otherwise fallback to a default empty array
+  const itinerary = packageData.itinerary || [];
+  const inclusions = packageData.inclusions || [];
+  const exclusions = packageData.exclusions || [];
 
-  const inclusions = [
-    'Professional trek guide',
-    'All meals during trek',
-    'Accommodation (if overnight)',
-    'Safety equipment',
-    'First aid kit',
-    'Photography assistance',
-    'Certificate of completion',
-    'Transportation from meeting point'
-  ];
-
-  const exclusions = [
-    'Personal trekking gear',
-    'Travel insurance',
-    'Personal expenses',
-    'Tips for guides',
-    'Emergency evacuation',
-    'Alcoholic beverages'
-  ];
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -173,64 +141,70 @@ const PackageDetailsModal: React.FC<PackageDetailsModalProps> = ({
           </div>
 
           {/* Itinerary */}
-          <div className="mb-8">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Detailed Itinerary</h3>
-            <div className="space-y-4">
-              {itinerary.map((day, index) => (
-                <motion.div
-                  key={index}
-                  className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-semibold text-gray-900">{day.day}: {day.title}</h4>
-                    <span className="text-sm text-gray-500">{day.time}</span>
-                  </div>
-                  <ul className="space-y-1">
-                    {day.activities.map((activity, actIndex) => (
-                      <li key={actIndex} className="flex items-center text-sm text-gray-600">
-                        <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2"></div>
-                        {activity}
-                      </li>
-                    ))}
-                  </ul>
-                </motion.div>
-              ))}
+          {itinerary.length > 0 && (
+            <div className="mb-8">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Detailed Itinerary</h3>
+              <div className="space-y-4">
+                {itinerary.map((day, index) => (
+                  <motion.div
+                    key={index}
+                    className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-semibold text-gray-900">{day.day}: {day.title}</h4>
+                      <span className="text-sm text-gray-500">{day.time}</span>
+                    </div>
+                    <ul className="space-y-1">
+                      {day.activities.map((activity, actIndex) => (
+                        <li key={actIndex} className="flex items-center text-sm text-gray-600">
+                          <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2"></div>
+                          {activity}
+                        </li>
+                      ))}
+                    </ul>
+                  </motion.div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Inclusions & Exclusions */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-            <div>
-              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                <Shield className="h-5 w-5 text-green-600 mr-2" />
-                What's Included
-              </h3>
-              <ul className="space-y-2">
-                {inclusions.map((item, index) => (
-                  <li key={index} className="flex items-center text-sm text-gray-700">
-                    <div className="w-2 h-2 bg-green-400 rounded-full mr-3"></div>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                <X className="h-5 w-5 text-red-600 mr-2" />
-                What's Not Included
-              </h3>
-              <ul className="space-y-2">
-                {exclusions.map((item, index) => (
-                  <li key={index} className="flex items-center text-sm text-gray-700">
-                    <div className="w-2 h-2 bg-red-400 rounded-full mr-3"></div>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {inclusions.length > 0 && (
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                  <Shield className="h-5 w-5 text-green-600 mr-2" />
+                  What's Included
+                </h3>
+                <ul className="space-y-2">
+                  {inclusions.map((item, index) => (
+                    <li key={index} className="flex items-center text-sm text-gray-700">
+                      <div className="w-2 h-2 bg-green-400 rounded-full mr-3"></div>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {exclusions.length > 0 && (
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                  <X className="h-5 w-5 text-red-600 mr-2" />
+                  What's Not Included
+                </h3>
+                <ul className="space-y-2">
+                  {exclusions.map((item, index) => (
+                    <li key={index} className="flex items-center text-sm text-gray-700">
+                      <div className="w-2 h-2 bg-red-400 rounded-full mr-3"></div>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
 
           {/* Gallery Preview */}

@@ -193,7 +193,7 @@ export const createDefaultAdmin = async () => {
 export const adminLogin = async (username: string, password: string) => {
   try {
     // First, try to create default admin if it doesn't exist
-    await createDefaultAdmin();
+    // await createDefaultAdmin(); // Removed as per plan
 
     const { data, error } = await supabase
       .from('admin_users')
@@ -231,6 +231,114 @@ export const adminLogin = async (username: string, password: string) => {
     return { user: null, error: 'Login failed. Please try again.' };
   }
 };
+
+// User Authentication (New functions)
+export const registerUser = async (full_name: string, email: string, phone: string, password: string) => {
+  try {
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name,
+          phone,
+        },
+      },
+    });
+
+    if (authError) {
+      return { user: null, error: authError.message };
+    }
+
+    if (authData.user) {
+      // Insert user profile into public.users table
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .insert({
+          id: authData.user.id, // Link to auth.users ID
+          full_name,
+          email,
+          phone,
+        })
+        .select()
+        .single();
+
+      if (userError) {
+        // If user profile insertion fails, you might want to delete the auth user as well
+        await supabase.auth.admin.deleteUser(authData.user.id);
+        return { user: null, error: userError.message };
+      }
+      return { user: userData, error: null };
+    }
+    return { user: null, error: 'Registration failed: No user data returned.' };
+  } catch (error: any) {
+    console.error('Registration error:', error);
+    return { user: null, error: error.message || 'Registration failed. Please try again.' };
+  }
+};
+
+export const signInUser = async (email: string, password: string) => {
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      return { user: null, error: error.message };
+    }
+    return { user: data.user, error: null };
+  } catch (error: any) {
+    console.error('Sign-in error:', error);
+    return { user: null, error: error.message || 'Sign-in failed. Please try again.' };
+  }
+};
+
+// Supabase Storage for Package Images (New functions)
+export const uploadPackageImage = async (file: File, packageName: string) => {
+  const fileExtension = file.name.split('.').pop();
+  const fileName = `${packageName.replace(/\s+/g, '_').toLowerCase()}-${Date.now()}.${fileExtension}`;
+  const filePath = `public/${fileName}`; // Store in a 'public' folder within the bucket
+
+  const { data, error } = await supabase.storage
+    .from('package-images') // Ensure this bucket exists in Supabase
+    .upload(filePath, file, {
+      cacheControl: '3600',
+      upsert: false,
+    });
+
+  if (error) {
+    throw error;
+  }
+
+  // Get public URL
+  const { data: publicUrlData } = supabase.storage
+    .from('package-images')
+    .getPublicUrl(filePath);
+
+  return publicUrlData.publicUrl;
+};
+
+export const deletePackageImage = async (imageUrl: string) => {
+  // Extract the path within the bucket from the public URL
+  const pathSegments = imageUrl.split('/');
+  const bucketNameIndex = pathSegments.indexOf('package-images');
+  if (bucketNameIndex === -1 || bucketNameIndex + 1 >= pathSegments.length) {
+    console.warn('Could not extract file path from image URL for deletion:', imageUrl);
+    return;
+  }
+  const filePath = pathSegments.slice(bucketNameIndex + 1).join('/');
+
+  const { error } = await supabase.storage
+    .from('package-images')
+    .remove([filePath]);
+
+  if (error) {
+    console.error('Error deleting image from storage:', error);
+    throw error;
+  }
+};
+
 
 // Package operations
 export const getPackages = async () => {
@@ -294,7 +402,7 @@ export const createBooking = async (bookingData: any) => {
       phone: bookingData.phone,
       emergency_contact: bookingData.emergencyContact,
       emergency_phone: bookingData.emergencyPhone,
-    })
+    }, { onConflict: 'email' }) // Upsert based on email
     .select()
     .single();
 

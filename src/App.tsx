@@ -11,6 +11,7 @@ import WeatherWidget from './components/Weather/WeatherWidget';
 import NotificationSystem from './components/Notifications/NotificationSystem';
 import AuthModal from './components/Auth/AuthModal';
 import AdminPanel from './components/Admin/AdminPanel';
+import SignUpSuccessPage from './pages/SignUpSuccessPage'; // Import the new page
 
 function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -74,6 +75,11 @@ function App() {
   // Check if we're on admin route
   if (window.location.pathname === '/admin') {
     return <AdminPanel />;
+  }
+
+  // Check if we're on signup success route
+  if (window.location.pathname === '/signup-success') {
+    return <SignUpSuccessPage />;
   }
 
   return (
