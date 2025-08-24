@@ -235,6 +235,7 @@ export const adminLogin = async (username: string, password: string) => {
 // User Authentication (New functions)
 export const registerUser = async (full_name: string, email: string, phone: string, password: string) => {
   try {
+    // First, sign up the user with Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
@@ -247,10 +248,17 @@ export const registerUser = async (full_name: string, email: string, phone: stri
     });
 
     if (authError) {
+      // Handle the confusing "Email address is invalid" error that often means email is already registered
+      if (authError.message.includes('Email address') && authError.message.includes('is invalid')) {
+        return { user: null, error: 'This email address might already be registered. Please try signing in instead or use a different email.' };
+      }
       return { user: null, error: authError.message };
     }
 
-    if (authData.user) {
+    if (authData.user && authData.session) {
+      // Set the session to ensure the user is authenticated for the next request
+      await supabase.auth.setSession(authData.session);
+      
       // Insert user profile into public.users table
       const { data: userData, error: userError } = await supabase
         .from('users')
@@ -264,11 +272,23 @@ export const registerUser = async (full_name: string, email: string, phone: stri
         .single();
 
       if (userError) {
-        // If user profile insertion fails, you might want to delete the auth user as well
-        await supabase.auth.admin.deleteUser(authData.user.id);
-        return { user: null, error: userError.message };
+        console.error('Error creating user profile:', userError);
+        // If RLS policy blocks the insert, it means the policy needs to be updated
+        if (userError.message.includes('row-level security policy') || userError.code === '42501') {
+          return { 
+            user: null, 
+            error: 'Registration failed: Database security policy needs to be configured. Please ensure the RLS policy on the users table allows authenticated users to insert their own profile with: auth.uid() = id' 
+          };
+        }
+        return { user: null, error: `Failed to create user profile: ${userError.message}` };
       }
       return { user: userData, error: null };
+    } else if (authData.user && !authData.session) {
+      // User was created but no session (email confirmation required)
+      return { 
+        user: null, 
+        error: 'Registration successful! Please check your email to confirm your account before signing in.' 
+      };
     }
     return { user: null, error: 'Registration failed: No user data returned.' };
   } catch (error: any) {
@@ -279,15 +299,58 @@ export const registerUser = async (full_name: string, email: string, phone: stri
 
 export const signInUser = async (email: string, password: string) => {
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    if (error) {
-      return { user: null, error: error.message };
+    if (authError) {
+      return { user: null, error: authError.message };
     }
-    return { user: data.user, error: null };
+
+    if (!authData.user) {
+      return { user: null, error: 'No user data returned from authentication' };
+    }
+
+    // Check if user profile exists in public.users table
+    const { data: existingUser, error: fetchError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', authData.user.id)
+      .single();
+
+    if (fetchError && fetchError.code !== 'PGRST116') {
+      // PGRST116 means "no rows found", which is expected for new users
+      console.error('Error fetching user profile:', fetchError);
+      return { user: null, error: 'Failed to fetch user profile' };
+    }
+
+    if (existingUser) {
+      // User profile already exists, return it
+      return { user: existingUser, error: null };
+    }
+
+    // User profile doesn't exist, create it from auth user metadata
+    const userMetadata = authData.user.user_metadata || {};
+    const { data: newUser, error: createError } = await supabase
+      .from('users')
+      .insert({
+        id: authData.user.id,
+        full_name: userMetadata.full_name || '',
+        email: authData.user.email || email,
+        phone: userMetadata.phone || '',
+        emergency_contact: userMetadata.emergency_contact || null,
+        emergency_phone: userMetadata.emergency_phone || null,
+      })
+      .select()
+      .single();
+
+    if (createError) {
+      console.error('Error creating user profile on sign-in:', createError);
+      return { user: null, error: 'Failed to create user profile' };
+    }
+
+    return { user: newUser, error: null };
   } catch (error: any) {
     console.error('Sign-in error:', error);
     return { user: null, error: error.message || 'Sign-in failed. Please try again.' };
