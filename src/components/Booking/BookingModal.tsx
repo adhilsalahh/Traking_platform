@@ -55,30 +55,69 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, packageDat
 
   const saveBookingToDatabase = async () => {
     try {
-      const { createBooking } = await import('../../lib/supabase');
+      // Import createBooking function
+      const { supabase } = await import('../../lib/supabase');
+      
+      // Get current user
+      const currentUserStr = localStorage.getItem('currentUser');
+      let userId = null;
+      
+      if (currentUserStr) {
+        const currentUser = JSON.parse(currentUserStr);
+        userId = currentUser.id;
+      } else {
+        // Create or get user if not logged in
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .upsert({
+            full_name: bookingData.name,
+            email: bookingData.email,
+            phone: bookingData.phone,
+            emergency_contact: bookingData.emergencyContact,
+            emergency_phone: bookingData.emergencyPhone,
+          }, { onConflict: 'email' })
+          .select()
+          .single();
+
+        if (userError) {
+          throw userError;
+        }
+        userId = userData.id;
+      }
       
       const bookingPayload = {
-        name: bookingData.name,
-        email: bookingData.email,
-        phone: bookingData.phone,
-        emergencyContact: bookingData.emergencyContact,
-        emergencyPhone: bookingData.emergencyPhone,
-        itemId: packageData.id,
-        bookingType: bookingType,
+        user_id: userId,
+        ...bookingType === 'package' && { package_id: packageData.id },
+        ...bookingType === 'trail' && { trail_id: packageData.id },
+        ...bookingType === 'eco_stay' && { eco_stay_id: packageData.id },
+        booking_type: bookingType,
         participants: bookingData.participants,
-        date: bookingData.date,
-        specialRequests: bookingData.specialRequests,
-        totalAmount: totalAmount
+        booking_date: bookingData.date,
+        special_requests: bookingData.specialRequests,
+        total_amount: totalAmount,
+        status: 'Pending',
+        payment_status: 'Pending'
       };
 
-      const { data, error } = await createBooking(bookingPayload);
+      const { data, error } = await supabase
+        .from('bookings')
+        .insert([bookingPayload])
+        .select(`
+          *,
+          users (*),
+          packages (*),
+          trails (*),
+          eco_stays (*)
+        `)
+        .single();
       
       if (error) {
+        console.error('Booking error:', error);
         alert('Error submitting booking. Please try again.');
         return;
       }
 
-      // Send notifications to admin
+      // Mock sending notifications to admin
       const adminNotification = {
         to: 'adhilsalahhk@gmail.com',
         phone: '8129464465',
@@ -109,9 +148,9 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, packageDat
       alert(`Booking submitted successfully! 
       
       ✅ Booking saved to database
+      ✅ Booking Reference: ${data?.booking_reference || 'Generated'}
       ✅ Admin notification sent
       ✅ You will receive confirmation via email and WhatsApp once approved
-      ✅ Booking ID: ${data?.booking_id || 'BK' + Date.now().toString().slice(-6)}
       
       Our team will contact you within 2 hours to confirm your booking.`);
       

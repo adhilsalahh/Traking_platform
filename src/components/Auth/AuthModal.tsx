@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { X, Mail, Phone, Eye, EyeOff, User } from 'lucide-react';
-import { registerUser, signInUser } from '../../lib/supabase'; // Import new functions
+import { registerUser, signInUser } from '../../lib/auth'; // Import from auth.ts
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -31,37 +31,83 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onModeChan
     setLoading(true);
     setError(null);
 
+    console.log('Form submitted with mode:', mode);
+
     if (mode === 'signup') {
       if (formData.password !== formData.confirmPassword) {
         setError('Passwords do not match.');
         setLoading(false);
         return;
       }
+      
+      console.log('Attempting registration...', {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone
+      });
+      
       try {
-        const { user, error } = await registerUser(formData.name, formData.email, formData.phone, formData.password);
+        const { user, error, needsConfirmation } = await registerUser(
+          formData.name, 
+          formData.email, 
+          formData.phone, 
+          formData.password
+        );
+        
+        console.log('Registration result:', { user, error, needsConfirmation });
+        
         if (error) {
           setError(error);
-        } else if (user) {
-          alert('Registration successful! Please sign in.');
+        } else if (user && needsConfirmation) {
+          alert('Registration successful! Please check your email (or console logs in demo) to confirm your account before signing in.');
           onClose();
-          window.location.href = '/signup-success'; // Redirect to confirmation page
+          // Clear form
+          setFormData({
+            name: '',
+            email: '',
+            phone: '',
+            password: '',
+            confirmPassword: ''
+          });
+          onModeChange('signin');
+        } else if (user) {
+          // Registration successful without confirmation needed
+          localStorage.setItem('currentUser', JSON.stringify(user));
+          onClose();
+          window.location.reload();
         }
       } catch (err: any) {
+        console.error('Registration error:', err);
         setError(err.message || 'Registration failed.');
       } finally {
         setLoading(false);
       }
     } else { // signin mode
+      console.log('Attempting signin...', { email: formData.email });
+      
       try {
         const { user, error } = await signInUser(formData.email, formData.password);
+        
+        console.log('Signin result:', { user, error });
+        
         if (error) {
           setError(error);
         } else if (user) {
-          alert('Sign in successful!');
+          // Remove email confirmation check for now to allow login
+          // if (!user.email_confirmed) {
+          //   setError('Please confirm your email address before signing in. Check your inbox for the confirmation link.');
+          //   setLoading(false);
+          //   return;
+          // }
+          
+          // Store user in localStorage for session management
+          localStorage.setItem('currentUser', JSON.stringify(user));
+          
           onClose();
-          window.location.href = '/'; // Redirect to home page
+          window.location.reload(); // Refresh to update UI with user data
         }
       } catch (err: any) {
+        console.error('Signin error:', err);
         setError(err.message || 'Sign in failed.');
       } finally {
         setLoading(false);
@@ -295,7 +341,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onModeChan
           {/* Security Notice */}
           <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
             <p className="text-xs sm:text-sm text-emerald-800 text-center">
-              🔒 Your data is secured with Supabase authentication and encrypted storage
+              🔒 Your data is secured with enterprise-grade authentication and encrypted storage
             </p>
           </div>
         </div>

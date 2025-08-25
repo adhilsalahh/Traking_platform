@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { Menu, X, Mountain } from 'lucide-react';
 import AdminLoginModal from '../Auth/AdminLoginModal';
+import UserProfileDropdown from '../User/UserProfileDropdown';
 
 interface HeaderProps {
   onAuthClick?: () => void;
+  currentUser?: any;
+  onSignOut?: () => void;
 }
 
-export default function Header({ onAuthClick }: HeaderProps) {
+export default function Header({ onAuthClick, currentUser, onSignOut }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
 
@@ -48,14 +51,16 @@ export default function Header({ onAuthClick }: HeaderProps) {
 
           {/* Auth & Admin Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            {onAuthClick && (
+            {currentUser ? (
+              <UserProfileDropdown user={currentUser} onSignOut={onSignOut} />
+            ) : onAuthClick ? (
               <button
                 onClick={onAuthClick}
                 className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
               >
                 Sign In
               </button>
-            )}
+            ) : null}
             <button
               onClick={() => setIsAdminLoginOpen(true)}
               className="text-gray-600 hover:text-green-600 transition-colors text-sm"
@@ -124,7 +129,17 @@ export default function Header({ onAuthClick }: HeaderProps) {
                 Reviews
               </a>
               <div className="flex flex-col space-y-2 pt-4 border-t border-gray-200">
-                {onAuthClick && (
+                {currentUser ? (
+                  <button
+                    onClick={() => {
+                      onSignOut?.();
+                      setIsMenuOpen(false);
+                    }}
+                    className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-left"
+                  >
+                    Sign Out
+                  </button>
+                ) : onAuthClick ? (
                   <button
                     onClick={() => {
                       onAuthClick();
@@ -134,7 +149,7 @@ export default function Header({ onAuthClick }: HeaderProps) {
                   >
                     Sign In
                   </button>
-                )}
+                ) : null}
                 <button
                   onClick={() => {
                     setIsAdminLoginOpen(true);

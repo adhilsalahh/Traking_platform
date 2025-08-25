@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from './components/Layout/Header';
 import Footer from './components/Layout/Footer';
 import HeroSection from './components/Hero/HeroSection';
@@ -12,11 +12,77 @@ import NotificationSystem from './components/Notifications/NotificationSystem';
 import AuthModal from './components/Auth/AuthModal';
 import AdminPanel from './components/Admin/AdminPanel';
 import SignUpSuccessPage from './pages/SignUpSuccessPage'; // Import the new page
+import EmailConfirmationPage from './pages/EmailConfirmationPage';
+import { getCurrentUser, signOutUser, UserProfile } from './lib/auth';
 
 function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Check for current user on app load
+    const checkCurrentUser = async () => {
+      try {
+        // First check localStorage for cached user
+        const cachedUser = localStorage.getItem('currentUser');
+        if (cachedUser) {
+          setCurrentUser(JSON.parse(cachedUser));
+        }
+
+        // Then verify with Supabase
+        const user = await getCurrentUser();
+        if (user) {
+          setCurrentUser(user);
+          localStorage.setItem('currentUser', JSON.stringify(user));
+        } else {
+          setCurrentUser(null);
+          localStorage.removeItem('currentUser');
+        }
+      } catch (error) {
+        console.error('Error checking current user:', error);
+        setCurrentUser(null);
+        localStorage.removeItem('currentUser');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkCurrentUser();
+
+    // Check if we should open sign-in modal from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('signin') === 'true') {
+      setIsAuthModalOpen(true);
+      setAuthMode('signin');
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
+  const handleSignOut = async () => {
+    try {
+      await signOutUser();
+      setCurrentUser(null);
+      localStorage.removeItem('currentUser');
+      addNotification({
+        type: 'success',
+        title: 'Signed Out',
+        message: 'You have been successfully signed out.',
+        duration: 3000
+      });
+    } catch (error) {
+      console.error('Sign out error:', error);
+      addNotification({
+        type: 'error',
+        title: 'Sign Out Failed',
+        message: 'There was an error signing you out. Please try again.',
+        duration: 5000
+      });
+    }
+  };
 
   const addNotification = (notification: any) => {
     const id = Date.now().toString();
@@ -82,10 +148,25 @@ function App() {
     return <SignUpSuccessPage />;
   }
 
+  // Check if we're on email confirmation route
+  if (window.location.pathname === '/confirm-email') {
+    return <EmailConfirmationPage />;
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-emerald-600"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white">
       <Header 
-        onAuthClick={() => setIsAuthModalOpen(true)}
+        onAuthClick={currentUser ? undefined : () => setIsAuthModalOpen(true)}
+        currentUser={currentUser}
+        onSignOut={handleSignOut}
       />
       
       <main>
@@ -122,18 +203,20 @@ function App() {
         onModeChange={setAuthMode}
       />
 
-      {/* Demo notification trigger */}
-      <button
-        onClick={() => addNotification({
-          type: 'success',
-          title: 'Booking Confirmed!',
-          message: 'Your Kerala adventure is confirmed. Check your email for details.',
-          duration: 5000
-        })}
-        className="fixed bottom-4 right-4 bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-emerald-700 transition-colors z-40"
-      >
-        Test Notification
-      </button>
+      {/* Demo notification trigger - only show for development */}
+      {process.env.NODE_ENV === 'development' && (
+        <button
+          onClick={() => addNotification({
+            type: 'success',
+            title: 'Booking Confirmed!',
+            message: 'Your Kerala adventure is confirmed. Check your email for details.',
+            duration: 5000
+          })}
+          className="fixed bottom-4 right-4 bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-emerald-700 transition-colors z-40"
+        >
+          Test Notification
+        </button>
+      )}
     </div>
   );
 }
